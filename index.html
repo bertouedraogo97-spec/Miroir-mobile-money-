@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Miroir Mobile Money</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --panel:#ffffff;
+    --panel-2:#f3f4f6;
+    --line:#e3e5e9;
+    --text:#1a1d22;
+    --muted:#68707c;
+    --gold:#b8863c;
+    --gold-dim:#8a6d3c;
+    --income:#2f8f5b;
+    --expense:#b6503a;
+    --orange-money:#ff7a00;
+    --moov-blue:#2f6fed;
+    --radius:14px;
+    font-size:16px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    padding-bottom:76px;
+    min-height:100vh;
+  }
+  .mono{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;}
+
+  header.top{
+    padding:22px 20px 16px;
+    border-bottom:1px solid var(--line);
+  }
+  header.top .label{
+    color:var(--muted);
+    font-size:13px;
+    letter-spacing:.02em;
+  }
+  header.top h1{
+    margin:4px 0 0;
+    font-size:22px;
+    font-weight:600;
+  }
+
+  main{padding:18px 16px 8px; max-width:520px; margin:0 auto;}
+
+  .view{display:none;}
+  .view.active{display:block;}
+
+  /* Balance mirror card */
+  .mirror-card{
+    background:linear-gradient(155deg, var(--panel-2), var(--panel));
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:24px 20px;
+    margin-bottom:16px;
+    box-shadow:0 1px 3px rgba(20,20,20,.05);
+  }
+  .mirror-card .sub{color:var(--muted); font-size:13px;}
+  .mirror-card .amount{
+    font-size:38px;
+    font-weight:700;
+    margin:6px 0 2px;
+  }
+  .mirror-card .amount.mono{letter-spacing:-.01em;}
+  .flow-row{
+    display:flex;
+    gap:12px;
+    margin-top:18px;
+  }
+  .flow-pill{
+    flex:1;
+    background:var(--panel);
+    border-radius:10px;
+    padding:12px 14px;
+    border:1px solid var(--line);
+  }
+  .flow-pill .k{font-size:12px; color:var(--muted);}
+  .flow-pill .v{font-size:18px; font-weight:600; margin-top:2px;}
+  .flow-pill.income .v{color:var(--income);}
+  .flow-pill.expense .v{color:var(--expense);}
+
+  .section-title{
+    font-size:13px;
+    color:var(--muted);
+    margin:22px 0 10px;
+  }
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:16px;
+    margin-bottom:14px;
+    box-shadow:0 1px 3px rgba(20,20,20,.04);
+  }
+
+  /* Category bars */
+  .cat-row{display:flex; align-items:center; gap:10px; margin-bottom:12px;}
+  .cat-row:last-child{margin-bottom:0;}
+  .cat-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .cat-name{flex:1; font-size:14px;}
+  .cat-amt{font-size:14px; color:var(--muted);}
+  .cat-track{
+    height:6px;background:var(--panel-2);border-radius:3px;overflow:hidden;
+    margin-top:6px; grid-column:1/-1;
+  }
+  .cat-fill{height:100%; border-radius:3px;}
+  .cat-wrap{display:flex; flex-direction:column;}
+
+  /* Trend bars svg */
+  svg{display:block; width:100%; height:auto;}
+
+  /* Transactions */
+  .tx{
+    display:flex; align-items:center; gap:12px;
+    padding:12px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .tx:last-child{border-bottom:none;}
+  .tx-badge{
+    width:34px;height:34px;border-radius:9px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:11px; font-weight:700; flex-shrink:0;
+  }
+  .tx-badge.om{background:rgba(255,122,0,.15); color:var(--orange-money);}
+  .tx-badge.moov{background:rgba(47,111,237,.15); color:var(--moov-blue);}
+  .tx-info{flex:1; min-width:0;}
+  .tx-info .t{font-size:14px;}
+  .tx-info .d{font-size:12px; color:var(--muted); margin-top:1px;}
+  .tx-amt{font-size:14px; font-weight:600; white-space:nowrap;}
+  .tx-amt.in{color:var(--income);}
+  .tx-amt.out{color:var(--expense);}
+  .tx-del{
+    background:none;border:none;color:var(--muted);font-size:18px;
+    padding:4px 6px;cursor:pointer;
+  }
+
+  .empty{
+    text-align:center; padding:50px 20px; color:var(--muted);
+  }
+  .empty .big{font-size:32px; margin-bottom:10px;}
+
+  /* Import view */
+  textarea{
+    width:100%;
+    min-height:180px;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:10px;
+    color:var(--text);
+    font-size:14px;
+    padding:12px;
+    resize:vertical;
+    font-family:inherit;
+  }
+  input[type="text"], input[type="number"]{
+    width:100%;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:10px;
+    color:var(--text);
+    font-size:14px;
+    padding:12px;
+    font-family:inherit;
+  }
+  .hint{font-size:12.5px; color:var(--muted); line-height:1.5; margin:10px 0 16px;}
+  .hint b{color:var(--text); font-weight:600;}
+  button.primary{
+    width:100%;
+    background:var(--gold);
+    color:#1a1305;
+    border:none;
+    border-radius:10px;
+    padding:14px;
+    font-size:15px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  button.primary:active{opacity:.85;}
+  button.ghost{
+    width:100%;
+    background:none;
+    border:1px solid var(--line);
+    color:var(--muted);
+    border-radius:10px;
+    padding:12px;
+    font-size:14px;
+    margin-top:10px;
+    cursor:pointer;
+  }
+  .parse-result{
+    margin-top:14px;
+    font-size:13px;
+    color:var(--muted);
+  }
+  .parse-result b{color:var(--income);}
+
+  /* Bottom nav */
+  nav.bottom{
+    position:fixed; bottom:0; left:0; right:0;
+    background:var(--panel);
+    border-top:1px solid var(--line);
+    display:flex;
+    padding:8px 6px calc(8px + env(safe-area-inset-bottom));
+  }
+  nav.bottom button{
+    flex:1;
+    background:none;
+    border:none;
+    color:var(--muted);
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+    padding:6px 0;
+    font-size:11px;
+    cursor:pointer;
+  }
+  nav.bottom button svg{width:20px;height:20px;}
+  nav.bottom button.active{color:var(--gold);}
+  nav.bottom button.active svg{stroke:var(--gold);}
+
+  .predict-line{font-size:14px; color:var(--muted); line-height:1.6;}
+  .predict-line b{color:var(--text);}
+  .predict-warn{color:var(--expense);}
+  .predict-ok{color:var(--income);}
+
+  .period-btn{
+    flex:1;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    color:var(--muted);
+    border-radius:8px;
+    padding:9px 0;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .period-btn.active{
+    background:var(--gold);
+    border-color:var(--gold);
+    color:#1a1305;
+  }
+  .nav-arrow{
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    color:var(--text);
+    width:34px;height:34px;
+    border-radius:8px;
+    font-size:18px;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+  .compare-tag{
+    display:inline-block;
+    font-size:12.5px;
+    padding:2px 8px;
+    border-radius:6px;
+    margin-left:6px;
+  }
+  .compare-tag.up{background:rgba(47,143,91,.12); color:var(--income);}
+  .compare-tag.down{background:rgba(182,80,58,.12); color:var(--expense);}
+
+  .app-copyright{
+    text-align:center;
+    font-size:11.5px;
+    color:var(--muted);
+    padding:6px 20px 18px;
+  }
+
+  .nb-note{
+    font-size:12px;
+    color:var(--muted);
+    margin-top:12px;
+    line-height:1.5;
+    border-top:1px dashed var(--line);
+    padding-top:10px;
+  }
+  .nb-note b{color:var(--text);}
+
+  .admin-overlay{
+    display:none;
+    position:fixed; inset:0;
+    background:rgba(0,0,0,.55);
+    z-index:500;
+    align-items:flex-end;
+    justify-content:center;
+  }
+  .admin-overlay.open{display:flex;}
+  .admin-panel{
+    background:var(--bg);
+    width:100%;
+    max-width:520px;
+    max-height:88vh;
+    overflow-y:auto;
+    border-radius:18px 18px 0 0;
+    padding:18px 18px calc(18px + env(safe-area-inset-bottom));
+  }
+  .admin-head{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:14px;
+  }
+  .admin-status{
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:12px;
+    font-size:13.5px;
+    line-height:1.6;
+    margin-bottom:8px;
+  }
+  .admin-code{
+    margin-top:8px;
+    font-size:13px;
+    font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:10px 12px;
+    word-break:break-all;
+    min-height:16px;
+  }
+
+  .print-only{display:none;}
+
+  @media print{
+    :root{
+      --bg:#ffffff;
+      --panel:#ffffff;
+      --panel-2:#f2f2f2;
+      --line:#cccccc;
+      --text:#111111;
+      --muted:#555555;
+      --income:#2e7d4f;
+      --expense:#a13c26;
+      --gold:#8a6d3c;
+    }
+    body{background:#fff; padding-bottom:0;}
+    header.top, nav.bottom, .no-print,
+    #view-dashboard, #view-transactions, #view-import{
+      display:none !important;
+    }
+    #view-reports{display:block !important;}
+    main{padding:0; max-width:100%;}
+    .card{border:1px solid #ddd; break-inside:avoid;}
+    .print-only{display:block;}
+    #print-only-header{margin-bottom:16px;}
+    #print-only-header h2{margin:0 0 2px; font-size:20px;}
+    #print-only-header #print-subtitle{font-size:12.5px; color:#555;}
+    #print-footer{margin-top:18px; font-size:11px; color:#777; text-align:center;}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="label">Bilan personnel · local &amp; hors-ligne</div>
+  <h1 id="header-title">Miroir Mobile Money</h1>
+  <div class="label" id="license-badge" style="margin-top:2px;"></div>
+</header>
+
+<main>
+
+  <!-- DASHBOARD -->
+  <section class="view active" id="view-dashboard">
+    <div class="mirror-card">
+      <div class="sub">Solde net (période analysée)</div>
+      <div class="amount mono" id="net-balance">0 FCFA</div>
+      <div class="flow-row">
+        <div class="flow-pill income">
+          <div class="k">Entrées</div>
+          <div class="v mono" id="total-in">0</div>
+        </div>
+        <div class="flow-pill expense">
+          <div class="k">Sorties</div>
+          <div class="v mono" id="total-out">0</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="dashboard-body"></div>
+  </section>
+
+  <!-- REPORTS -->
+  <section class="view" id="view-reports">
+    <div id="print-only-header" class="print-only">
+      <h2 id="print-title">Miroir Mobile Money</h2>
+      <div id="print-subtitle"></div>
+    </div>
+    <div class="card no-print">
+      <div class="section-title" style="margin-top:0;">Nom sur les rapports</div>
+      <input type="text" id="business-name-input" placeholder="Nom de la boutique, de l'entreprise ou personnel">
+    </div>
+    <div class="card">
+      <div style="display:flex; gap:8px; margin-bottom:14px;" class="no-print">
+        <button class="period-btn active" data-period="day">Jour</button>
+        <button class="period-btn" data-period="week">Semaine</button>
+        <button class="period-btn" data-period="month">Mois</button>
+      </div>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+        <button class="nav-arrow no-print" id="period-prev">‹</button>
+        <div id="period-label" style="font-size:15px; font-weight:600; text-align:center; flex:1;"></div>
+        <button class="nav-arrow no-print" id="period-next">›</button>
+      </div>
+      <button class="ghost no-print" id="print-report-btn" style="margin-top:4px;">🖨️ Imprimer ce rapport</button>
+    </div>
+    <div id="report-body"></div>
+    <div class="print-only" id="print-footer"></div>
+  </section>
+
+  <!-- TRANSACTIONS -->
+  <section class="view" id="view-transactions">
+    <div class="card" id="tx-list-card">
+      <div class="empty" id="tx-empty">
+        <div class="big">🧾</div>
+        Aucune transaction pour l'instant.<br>Importe tes SMS pour commencer.
+      </div>
+      <div id="tx-list"></div>
+    </div>
+  </section>
+
+  <!-- IMPORT -->
+  <section class="view" id="view-import">
+    <div class="card" id="activation-card">
+      <div class="section-title" style="margin-top:0;">Code d'activation</div>
+      <div class="nb-note" id="free-limit-status" style="margin-top:0; border-top:none; padding-top:0;"></div>
+      <input type="text" id="import-activation-input" placeholder="Coller le code reçu">
+      <button class="primary" id="import-activation-btn" style="margin-top:10px;">Activer</button>
+      <div class="admin-code" id="import-activation-result"></div>
+    </div>
+
+    <div class="card">
+      <div class="section-title" style="margin-top:0;">Coller des SMS Mobile Money</div>
+      <textarea id="sms-input" placeholder="Colle ici un ou plusieurs SMS Orange Money / Moov Money...
+
+Ex : Vous avez recu 15000 FCFA de KABORE ISSOUF le 12/09 a 14:32. Nouveau solde: 42300 FCFA."></textarea>
+      <div class="hint">
+        <b>100% local</b> — rien n'est envoyé sur internet. Le texte est analysé directement sur ton téléphone.<br><br>
+        <b>Doublons :</b> un SMS déjà importé n'est jamais compté deux fois, même si tu le recolles par erreur.<br><br>
+        <b>Heure :</b> quand le SMS ne précise pas d'heure, l'app utilise l'horloge du téléphone — normalement synchronisée avec le réseau/la SIM si la date/heure automatique est activée dans les réglages Android.<br><br>
+        <b>Astuce :</b> installe cette app sur ton écran d'accueil. Elle apparaîtra ensuite dans le menu "Partager" d'Android — tu pourras sélectionner plusieurs SMS dans Messages et les envoyer ici directement.
+      </div>
+      <button class="primary" id="parse-btn">Analyser les SMS</button>
+      <div class="parse-result" id="parse-result"></div>
+    </div>
+    <button class="ghost" id="clear-btn">Effacer toutes les données</button>
+  </section>
+
+</main>
+
+<div class="app-copyright no-print">Ouedraogo Namketa Omar Bertrand © 2026</div>
+
+<nav class="bottom">
+  <button class="nav-btn active" data-view="dashboard">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
+    Bilan
+  </button>
+  <button class="nav-btn" data-view="reports">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v4M16 3v4M4 8h16M5 6h14a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/></svg>
+    Rapports
+  </button>
+  <button class="nav-btn" data-view="transactions">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+    Transactions
+  </button>
+  <button class="nav-btn" data-view="import">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v12M6 10l6 6 6-6"/><path d="M4 20h16"/></svg>
+    Importer
+  </button>
+</nav>
+
+<!-- ADMIN PANEL (masqué — 15 clics sur le titre pour ouvrir) -->
+<div id="admin-overlay" class="admin-overlay">
+  <div class="admin-panel">
+    <div class="admin-head">
+      <div class="section-title" style="margin:0;">Panneau administrateur</div>
+      <button class="nav-arrow" id="admin-close">×</button>
+    </div>
+
+    <div class="admin-status" id="admin-status"></div>
+
+    <div class="section-title">Activation rapide</div>
+    <div style="display:flex; gap:8px;">
+      <button class="ghost" id="activate-365" style="margin-top:0; width:auto; flex:1;">Activer 365 jours</button>
+      <button class="ghost" id="activate-perm" style="margin-top:0; width:auto; flex:1;">Activer Permanente</button>
+    </div>
+    <button class="ghost" id="activate-reset">Repasser en gratuit</button>
+
+    <div class="section-title">Générer un code d'activation</div>
+    <div style="display:flex; gap:8px;">
+      <button class="ghost" id="gen-365" style="margin-top:0; width:auto; flex:1;">Générer 365 jours</button>
+      <button class="ghost" id="gen-perm" style="margin-top:0; width:auto; flex:1;">Générer Permanente</button>
+    </div>
+    <div class="admin-code" id="generated-code"></div>
+    <button class="ghost" id="share-code-btn" style="display:none;">📤 Partager le code (valable 10 min)</button>
+
+    <div class="section-title">Entrer un code d'activation</div>
+    <input type="text" id="redeem-code-input" placeholder="Ex : ACT365-XXXX-XXXX">
+    <button class="primary" id="redeem-code-btn" style="margin-top:10px;">Activer avec ce code</button>
+    <div class="admin-code" id="redeem-result"></div>
+  </div>
+</div>
+
+<script>(function(){"use strict";var H="miroir_transactions_v1",j="miroir_business_name_v1",P="miroir_license_v1",re="Ouedraogo Namketa Omar Bertrand \xA9 2026";function ie(){try{return localStorage.getItem(j)||""}catch(e){return""}}function oe(e){try{localStorage.setItem(j,e)}catch(t){}}var se=1440*60*1e3;function _(){try{var e=localStorage.getItem(P);return e?JSON.parse(e):{tier:"free"}}catch(t){return{tier:"free"}}}function Y(e){try{localStorage.setItem(P,JSON.stringify(e))}catch(t){}}function ce(e){for(var t="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",n="",a=0;a<e;a++)n+=t.charAt(Math.floor(Math.random()*t.length));return n}function q(e){var t=e==="365"?"ACT365":"ACTPRM",n=Date.now().toString(36).toUpperCase();return t+"-"+n+"-"+ce(4)}function de(e){var t=e.trim().toUpperCase().split("-");if(t.length<3)return null;var n=parseInt(t[1],36);return isNaN(n)?null:n}function R(e){var t={tier:e,activatedAt:new Date().toISOString()};e==="bless365"&&(t.expiresAt=new Date(Date.now()+365*se).toISOString()),Y(t),L()}function z(e){var t=e.trim().toUpperCase(),n=t.indexOf("ACTPRM")===0,a=t.indexOf("ACT365")===0;if(!n&&!a)return{ok:!1,msg:"Code invalide."};var r=de(t);if(r===null)return{ok:!1,msg:"Code invalide (format incorrect)."};var i=Date.now()-r;return i>600*1e3?{ok:!1,msg:"Ce code a expir\xE9 \u2014 les codes g\xE9n\xE9r\xE9s ne sont valables que 10 minutes."}:i<-300*1e3?{ok:!1,msg:"Code invalide (horodatage incoh\xE9rent)."}:(R(n?"blesspermanente":"bless365"),{ok:!0,msg:n?"Code accept\xE9 \u2014 licence Permanente activ\xE9e.":"Code accept\xE9 \u2014 licence 365 jours activ\xE9e."})}function K(e){if(e.tier==="blesspermanente")return"Licence Permanente \u2014 \xE0 vie";if(e.tier==="bless365"){var t=e.expiresAt?new Date(e.expiresAt):null,n=t&&t.getTime()<Date.now(),a=t?t.toLocaleDateString("fr-FR"):"?";return n?"Licence 365 jours \u2014 expir\xE9e le "+a:"Licence 365 jours \u2014 valable jusqu'au "+a}return"Version gratuite"}var O=50;function U(){var e=_();if(e.tier==="blesspermanente")return!0;if(e.tier==="bless365"){var t=e.expiresAt?new Date(e.expiresAt).getTime():0;return Date.now()<=t}return!1}function L(){var e=_(),t=document.getElementById("license-badge");t&&(t.textContent=K(e));var n=document.getElementById("admin-status");n&&(n.innerHTML="<b>Statut actuel :</b> "+K(e)),ne()}"serviceWorker"in navigator&&window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})});function le(){try{var e=localStorage.getItem(H);return e?JSON.parse(e):[]}catch(t){return[]}}function F(e){try{localStorage.setItem(H,JSON.stringify(e))}catch(t){}}var v=le(),w=ie();function A(e){return e.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase()}function B(e){var t=e.match(/\.\s/);return t?e.slice(0,t.index+1):e}function ue(e){var t=A(e);return t.indexOf("orange money")!==-1||t.indexOf("om ")!==-1?"orange":t.indexOf("moov money")!==-1||t.indexOf("moov ")!==-1?"moov":"orange"}function me(e){var t=A(B(e));if(t.indexOf("recharge")!==-1)return t.indexOf("unites")!==-1||t.indexOf("credit")!==-1?"out":"in";for(var n=["vous avez recu","reception","depot","credite","allez recevoir","paiement confirme"],a=["retrait","retir","paiement","envoy","transfer","achat","facture","debite","abonnement"],r=0;r<n.length;r++)if(t.indexOf(n[r])!==-1)return"in";for(var i=0;i<a.length;i++)if(t.indexOf(a[i])!==-1)return"out";return null}function ve(e,t){var n=A(B(e));return t==="in"?n.indexOf("depot")!==-1||n.indexOf("recharge")!==-1?"D\xE9p\xF4t":n.indexOf("remboursement")!==-1?"Remboursement":n.indexOf("paiement confirme")!==-1?"Paiement re\xE7u":"Transfert re\xE7u":n.indexOf("retrait")!==-1||n.indexOf("retir")!==-1?"Retrait":n.indexOf("compte bancaire")!==-1?"Transfert bancaire":n.indexOf("recharge")!==-1?"Achat cr\xE9dit/forfait":n.indexOf("unites")!==-1||n.indexOf("mega")!==-1?"Transfert d'unit\xE9s":n.indexOf("credit")!==-1||n.indexOf("forfait")!==-1?"Achat cr\xE9dit/forfait":n.indexOf("abonnement")!==-1||n.indexOf("facture")!==-1?"Facture":n.indexOf("transfer")!==-1||n.indexOf("envoy")!==-1?"Transfert envoy\xE9":n.indexOf("achat")!==-1||n.indexOf("paiement")!==-1?"Paiement marchand":"Autre"}function W(e){var t=e.match(/([\d][\d\s.,]{1,12})\s*(?:fcfa|f\b|xof)/i);if(!t)return null;var n=t[1].replace(/\s+/g,""),a=Math.max(n.lastIndexOf(","),n.lastIndexOf(".")),r;if(a===-1)r=parseFloat(n);else{var i=n.length-a-1;if(i===1||i===2){var s=n.slice(0,a).replace(/[.,]/g,""),o=n.slice(a+1);r=parseFloat(s+"."+o)}else r=parseFloat(n.replace(/[.,]/g,""))}return isNaN(r)?null:Math.round(r)}function fe(e){var t=W(B(e));return t!==null?t:W(e)}function pe(e){var t=e.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/),n=e.match(/(\d{1,2})\s*[h:]\s*(\d{2})/i),a=new Date,r=a.getFullYear(),i=a.getMonth(),s=a.getDate(),o=a.getHours(),c=a.getMinutes(),u="import";if(t){var m=parseInt(t[1],10),f=parseInt(t[2],10)-1,p=parseInt(t[3],10);p<100&&(p+=2e3);var b=new Date(p,f,m);isNaN(b.getTime())||(r=p,i=f,s=m,u="sms",o=0,c=0)}if(n){var g=parseInt(n[1],10),l=parseInt(n[2],10);g>=0&&g<24&&l>=0&&l<60&&(o=g,c=l,u!=="sms"&&(u="sms-time-only"))}var d=new Date(r,i,s,o,c);return isNaN(d.getTime())&&(d=a),{iso:d.toISOString(),source:u}}function G(e){return e.trim().toLowerCase().replace(/\s+/g," ")}function ge(e){var t=e.match(/(?:de|a|à)\s+([A-ZÀ-Ý][A-ZÀ-Ýa-zà-ÿ'\-]+(?:\s+[A-ZÀ-Ý][A-ZÀ-Ýa-zà-ÿ'\-]+){0,2})/);return t?t[1].trim():null}function he(e){for(var t=A(B(e)),n=["transaction echouee","echouee","echec","annulee","annule","code de retrait"],a=0;a<n.length;a++)if(t.indexOf(n[a])!==-1)return!0;if(t.indexOf("recharge")!==-1||t.indexOf("achat")!==-1||t.indexOf("paiement")!==-1)return!1;var r=t.indexOf("unites")!==-1||t.indexOf("credit")!==-1||t.indexOf("sms")!==-1||t.indexOf("mega")!==-1||t.indexOf("bonus")!==-1,i=t.indexOf("transfer")!==-1||t.indexOf("envoy")!==-1;return!!(r&&!i)}function ye(e){var t=e.split(/\n\s*\n/).map(function(o){return o.trim()}).filter(Boolean);if(t.length<=1){var n=e.split(`
+`).map(function(o){return o.trim()}).filter(Boolean);n.length>1?t=n:t=[e.trim()]}var a={};v.forEach(function(o){a[G(o.raw)]=!0});var r=[],i=0,s=0;return t.forEach(function(o){if(o){var c=G(o);if(a[c]){i++;return}if(he(o)){s++;return}var u=fe(o),m=me(o);if(!(u===null||!m)){var f=pe(o);r.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,7),provider:ue(o),direction:m,category:ve(o,m),amount:u,counterparty:ge(o),date:f.iso,dateSource:f.source,raw:o.slice(0,300)}),a[c]=!0}}}),{found:r,duplicates:i,excluded:s}}function I(e){return Math.round(e).toLocaleString("fr-FR")+" FCFA"}function D(e){return Math.round(e).toLocaleString("fr-FR")}function Ae(e){var t=new Date(e);return t.toLocaleDateString("fr-FR",{day:"2-digit",month:"short"})}function be(e){var t=new Date(e),n=t.toLocaleDateString("fr-FR",{weekday:"long",day:"2-digit",month:"long"});return n.charAt(0).toUpperCase()+n.slice(1)}function Ee(e){var t=new Date(e);return t.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}function xe(e){var t=new Date(e);return t.getFullYear()+"-"+t.getMonth()+"-"+t.getDate()}function J(){var e=0,t=0,n={};return v.forEach(function(a){a.direction==="in"?e+=a.amount:t+=a.amount;var r=a.category;n[r]=n[r]||{in:0,out:0},n[r][a.direction]+=a.amount}),{totalIn:e,totalOut:t,net:e-t,categories:n}}function we(){var e={};v.forEach(function(n){var a=new Date(n.date),r=Ie(a);e[r]=e[r]||{in:0,out:0,label:r},e[r][n.direction]+=n.amount});var t=Object.keys(e).sort();return t.slice(-8).map(function(n){return e[n]})}function Ie(e){var t=new Date(e.getFullYear(),0,1),n=Math.ceil(((e-t)/864e5+t.getDay()+1)/7);return e.getFullYear()+"-S"+n}function Me(){if(v.length<3)return null;var e=v.map(function(i){return new Date(i.date).getTime()}),t=Math.max(1,(Math.max.apply(null,e)-Math.min.apply(null,e))/864e5),n=J(),a=(n.totalIn-n.totalOut)/t,r=a*30;return{dailyNet:a,projected30:r}}var k=["#b8863c","#2f8f5b","#b6503a","#3f6fd6","#7a5fc2","#c25f95"];function V(e,t){var n=e.D\u00E9p\u00F4t?e.D\u00E9p\u00F4t.in:0,a=e.Retrait?e.Retrait.out:0;if(n===0&&a===0)return null;var r="manual-depot-"+t,i="manual-retrait-"+t,s=document.createElement("div");return s.className="card",s.innerHTML='<div class="section-title" style="margin-top:0;">Mouvement de caisse (ton propre argent)</div><div class="flow-row" style="margin-top:0;"><div class="flow-pill income"><div class="k">D\xE9p\xF4t</div><div class="v mono"></div></div><div class="flow-pill expense"><div class="k">Retrait</div><div class="v mono"></div></div></div><div style="margin-top:12px;"><label style="font-size:12px; color:var(--muted); display:block; margin-bottom:4px;">D\xE9p\xF4t que tu sais avoir remis toi-m\xEAme (montant, facultatif \u2014 ne reste pas m\xE9moris\xE9)</label><input type="number" inputmode="numeric" class="manual-cash-input" data-field="depot" id="'+r+`" value="" placeholder="Ex : 500"></div><div style="margin-top:10px;"><label style="font-size:12px; color:var(--muted); display:block; margin-bottom:4px;">Retrait dont tu sais qu'une partie a \xE9t\xE9 r\xE9utilis\xE9e/revers\xE9e (montant, facultatif \u2014 ne reste pas m\xE9moris\xE9)</label><input type="number" inputmode="numeric" class="manual-cash-input" data-field="retrait" id="`+i+`" value="" placeholder="Ex : 500"></div><div class="nb-note"><b>NB :</b> un retrait suivi d'un d\xE9p\xF4t de la m\xEAme somme (ou d'une partie de cette somme) n'est pas un revenu \u2014 c'est ton propre argent qui circule entre le cash et ton compte Mobile Money, pas de l'argent re\xE7u d'un tiers. Ces montants restent compt\xE9s dans ton solde net, mais ne les lis pas comme des gains. Les champs ci-dessus sont pour toi seul, \xE0 titre illustratif \u2014 ils ne sont jamais enregistr\xE9s ni utilis\xE9s dans les calculs.</div>`,s}function Z(){var e=J();document.getElementById("net-balance").textContent=I(e.net),document.getElementById("total-in").textContent="+"+D(e.totalIn),document.getElementById("total-out").textContent="-"+D(e.totalOut);var t=document.getElementById("dashboard-body");if(t.innerHTML="",v.length===0){t.innerHTML='<div class="card"><div class="empty"><div class="big">\u{1FA9E}</div>Importe tes SMS Mobile Money pour voir ton bilan appara\xEEtre ici.</div></div>';return}var n=document.createElement("div");n.className="section-title",n.textContent="R\xE9partition",t.appendChild(n);var a=document.createElement("div");a.className="card";var r=Object.keys(e.categories),i=Math.max.apply(null,r.map(function(l){return e.categories[l].in+e.categories[l].out}).concat([1]));r.sort(function(l,d){var h=e.categories[l].in+e.categories[l].out,y=e.categories[d].in+e.categories[d].out;return y-h}).forEach(function(l,d){var h=e.categories[l],y=h.in+h.out,E=k[d%k.length],x=document.createElement("div");x.className="cat-wrap",x.style.marginBottom="12px",x.innerHTML='<div class="cat-row" style="margin-bottom:0;"><span class="cat-dot" style="background:'+E+'"></span><span class="cat-name">'+l+'</span><span class="cat-amt mono">'+I(y)+'</span></div><div class="cat-track"><div class="cat-fill" style="width:'+y/i*100+"%; background:"+E+'"></div></div>',a.appendChild(x)}),t.appendChild(a);var s=V(e.categories,"dash");s&&t.appendChild(s);var o=we();if(o.length>=2){var c=document.createElement("div");c.className="section-title",c.textContent="Tendance (par semaine)",t.appendChild(c);var u=document.createElement("div");u.className="card",u.appendChild(Ce(o)),t.appendChild(u)}var m=Me();if(m){var f=document.createElement("div");f.className="section-title",f.textContent="Pr\xE9diction",t.appendChild(f);var p=document.createElement("div");p.className="card predict-line";var b=m.projected30>=0?"predict-ok":"predict-warn",g=m.projected30>=0?"exc\xE9dent":"d\xE9ficit";p.innerHTML="Sur ta tendance actuelle (<b>"+I(Math.abs(m.dailyNet))+"</b>/jour "+(m.dailyNet>=0?"gagn\xE9":"perdu")+'), projection \xE0 30 jours : <b class="'+b+'">'+(m.projected30>=0?"+":"")+I(m.projected30)+"</b> ("+g+').<br><br><span style="font-size:12.5px;">Bas\xE9 sur '+v.length+" transaction(s) import\xE9e(s). Plus tu importes de SMS, plus la pr\xE9diction sera fiable.</span>",t.appendChild(p)}}function Ce(e){var t=480,n=140,a=8,r=Math.max.apply(null,e.map(function(u){return Math.max(u.in,u.out)}).concat([1])),i=(t-a*2)/e.length,s="http://www.w3.org/2000/svg",o=document.createElementNS(s,"svg");o.setAttribute("viewBox","0 0 "+t+" "+n),e.forEach(function(u,m){var f=a+m*i,p=u.in/r*(n/2-14),b=u.out/r*(n/2-14),g=n/2,l=document.createElementNS(s,"rect");l.setAttribute("x",f+i*.2),l.setAttribute("y",g-p),l.setAttribute("width",i*.6),l.setAttribute("height",p),l.setAttribute("rx",2),l.setAttribute("fill","#2f8f5b"),o.appendChild(l);var d=document.createElementNS(s,"rect");d.setAttribute("x",f+i*.2),d.setAttribute("y",g),d.setAttribute("width",i*.6),d.setAttribute("height",b),d.setAttribute("rx",2),d.setAttribute("fill","#b6503a"),o.appendChild(d)});var c=document.createElementNS(s,"line");return c.setAttribute("x1",a),c.setAttribute("x2",t-a),c.setAttribute("y1",n/2),c.setAttribute("y2",n/2),c.setAttribute("stroke","#e3e5e9"),c.setAttribute("stroke-width","1"),o.appendChild(c),o}function Se(){var e=document.getElementById("tx-list"),t=document.getElementById("tx-empty");if(e.innerHTML="",v.length===0){t.style.display="block";return}t.style.display="none";var n=v.slice().sort(function(r,i){return new Date(i.date)-new Date(r.date)}),a=null;n.forEach(function(r){var i=xe(r.date);if(i!==a){var s=document.createElement("div");s.className="section-title",s.style.marginTop=a===null?"0":"18px",s.textContent=be(r.date),e.appendChild(s),a=i}var o=document.createElement("div");o.className="tx";var c=r.provider==="moov"?"moov":"om",u=r.provider==="moov"?"MO":"OM",m=r.category+(r.counterparty?" \xB7 "+r.counterparty:"");o.innerHTML='<div class="tx-badge '+c+'">'+u+'</div><div class="tx-info"><div class="t">'+m+'</div><div class="d">'+Ee(r.date)+'</div></div><div class="tx-amt '+(r.direction==="in"?"in":"out")+' mono">'+(r.direction==="in"?"+":"-")+D(r.amount)+'</div><button class="tx-del" data-id="'+r.id+'">\xD7</button>',e.appendChild(o)}),e.querySelectorAll(".tx-del").forEach(function(r){r.addEventListener("click",function(){var i=r.getAttribute("data-id");v=v.filter(function(s){return s.id!==i}),F(v),T()})})}var M="day",C=0;function Q(e){return new Date(e.getFullYear(),e.getMonth(),e.getDate())}function Oe(e){var t=Q(e),n=(t.getDay()+6)%7;return t.setDate(t.getDate()-n),t}function De(e){return new Date(e.getFullYear(),e.getMonth(),1)}function X(e,t){var n=new Date,a,r,i;if(e==="day")a=Q(n),a.setDate(a.getDate()+t),r=new Date(a),r.setDate(r.getDate()+1),i=a.toLocaleDateString("fr-FR",{weekday:"long",day:"2-digit",month:"long"}),i=i.charAt(0).toUpperCase()+i.slice(1);else if(e==="week"){a=Oe(n),a.setDate(a.getDate()+t*7),r=new Date(a),r.setDate(r.getDate()+7);var s=new Date(r);s.setDate(s.getDate()-1),i="Semaine du "+a.toLocaleDateString("fr-FR",{day:"2-digit",month:"short"})+" au "+s.toLocaleDateString("fr-FR",{day:"2-digit",month:"short"})}else a=De(n),a.setMonth(a.getMonth()+t),r=new Date(a),r.setMonth(r.getMonth()+1),i=a.toLocaleDateString("fr-FR",{month:"long",year:"numeric"}),i=i.charAt(0).toUpperCase()+i.slice(1);return{start:a,end:r,label:i}}function $(e,t){var n=0,a=0,r=0,i={};return v.forEach(function(s){var o=new Date(s.date);if(o>=e&&o<t){r++,s.direction==="in"?n+=s.amount:a+=s.amount;var c=s.category;i[c]=i[c]||{in:0,out:0},i[c][s.direction]+=s.amount}}),{totalIn:n,totalOut:a,net:n-a,count:r,categories:i}}function S(){document.querySelectorAll(".period-btn").forEach(function(d){d.classList.toggle("active",d.getAttribute("data-period")===M)});var e=X(M,C);document.getElementById("period-label").textContent=e.label;var t=M==="day"?"Rapport journalier":M==="week"?"Rapport hebdomadaire":"Rapport mensuel";document.getElementById("print-title").textContent=w||"Miroir Mobile Money",document.getElementById("print-subtitle").textContent=t+" \u2014 "+e.label+(w?" \xB7 Miroir Mobile Money":""),document.getElementById("print-footer").textContent="G\xE9n\xE9r\xE9 le "+new Date().toLocaleDateString("fr-FR")+" \xE0 "+new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});var n=$(e.start,e.end),a=X(M,C-1),r=$(a.start,a.end),i=document.getElementById("report-body");i.innerHTML="";var s=document.createElement("div");s.className="card";var o="";if(r.net!==0){var c=Math.round((n.net-r.net)/Math.abs(r.net)*100),u=c>=0;o='<span class="compare-tag '+(u?"up":"down")+'">'+(u?"\u25B2":"\u25BC")+" "+Math.abs(c)+"% vs p\xE9riode pr\xE9c\xE9dente</span>"}else n.net!==0&&(o='<span class="compare-tag up">Nouveau</span>');s.innerHTML='<div class="sub">Solde net de la p\xE9riode '+o+'</div><div class="amount mono" style="font-size:28px; margin:6px 0 14px;">'+I(n.net)+'</div><div class="flow-row" style="margin-top:0;"><div class="flow-pill income"><div class="k">Entr\xE9es</div><div class="v mono">+'+D(n.totalIn)+'</div></div><div class="flow-pill expense"><div class="k">Sorties</div><div class="v mono">-'+D(n.totalOut)+'</div></div></div><div style="font-size:12.5px; color:var(--muted); margin-top:12px;">'+n.count+" transaction(s) sur cette p\xE9riode</div>",i.appendChild(s);var m=Object.keys(n.categories);if(m.length>0){var f=document.createElement("div");f.className="section-title",f.textContent="R\xE9partition de la p\xE9riode",i.appendChild(f);var p=document.createElement("div");p.className="card";var b=Math.max.apply(null,m.map(function(d){return n.categories[d].in+n.categories[d].out}).concat([1]));m.sort(function(d,h){var y=n.categories[d].in+n.categories[d].out,E=n.categories[h].in+n.categories[h].out;return E-y}).forEach(function(d,h){var y=n.categories[d],E=y.in+y.out,x=k[h%k.length],N=document.createElement("div");N.className="cat-wrap",N.style.marginBottom="12px",N.innerHTML='<div class="cat-row" style="margin-bottom:0;"><span class="cat-dot" style="background:'+x+'"></span><span class="cat-name">'+d+'</span><span class="cat-amt mono">'+I(E)+'</span></div><div class="cat-track"><div class="cat-fill" style="width:'+E/b*100+"%; background:"+x+'"></div></div>',p.appendChild(N)}),i.appendChild(p);var g=V(n.categories,"report");g&&i.appendChild(g)}else{var l=document.createElement("div");l.className="card",l.innerHTML='<div class="empty" style="padding:24px 10px;"><div class="big">\u{1F4ED}</div>Aucune transaction sur cette p\xE9riode.</div>',i.appendChild(l)}}document.getElementById("business-name-input").value=w,document.getElementById("business-name-input").addEventListener("input",function(e){w=e.target.value,oe(w),S()}),(function(){var e=0,t=0,n=document.getElementById("header-title");n.addEventListener("click",function(){var a=Date.now();a-t>2500&&(e=0),t=a,e++,e>=15&&(e=0,Le())})})();function Le(){L(),document.getElementById("generated-code").textContent="",document.getElementById("share-code-btn").style.display="none",document.getElementById("redeem-result").textContent="",document.getElementById("redeem-code-input").value="",document.getElementById("admin-overlay").classList.add("open")}function ee(){document.getElementById("admin-overlay").classList.remove("open")}document.getElementById("admin-close").addEventListener("click",ee),document.getElementById("admin-overlay").addEventListener("click",function(e){e.target.id==="admin-overlay"&&ee()}),document.getElementById("activate-365").addEventListener("click",function(){R("bless365")}),document.getElementById("activate-perm").addEventListener("click",function(){R("blesspermanente")}),document.getElementById("activate-reset").addEventListener("click",function(){Y({tier:"free"}),L()}),document.getElementById("gen-365").addEventListener("click",function(){te(q("365"))}),document.getElementById("gen-perm").addEventListener("click",function(){te(q("perm"))});function te(e){document.getElementById("generated-code").textContent=e+"  (valable 10 min)";var t=document.getElementById("share-code-btn");t.style.display="block",t.onclick=function(){var n="Code d'activation Miroir Mobile Money : "+e+" (valable 10 minutes)";navigator.share?navigator.share({text:n}).catch(function(){}):navigator.clipboard&&navigator.clipboard.writeText(n).then(function(){t.textContent="\u2714 Copi\xE9 dans le presse-papiers",setTimeout(function(){t.textContent="\u{1F4E4} Partager le code (valable 10 min)"},2e3)}).catch(function(){})}}document.getElementById("redeem-code-btn").addEventListener("click",function(){var e=document.getElementById("redeem-code-input").value,t=z(e),n=document.getElementById("redeem-result");n.textContent=t.msg,n.style.color=t.ok?"var(--income)":"var(--expense)"}),L(),document.querySelectorAll(".period-btn").forEach(function(e){e.addEventListener("click",function(){M=e.getAttribute("data-period"),C=0,S()})}),document.getElementById("period-prev").addEventListener("click",function(){C--,S()}),document.getElementById("period-next").addEventListener("click",function(){C<0&&(C++,S())}),document.getElementById("print-report-btn").addEventListener("click",function(){window.print()});function ne(){var e=document.getElementById("free-limit-status");if(e){if(U()){e.textContent="";return}var t=v.length,n=Math.max(0,O-t);e.textContent=n>0?"Mode gratuit : "+t+"/"+O+" transactions import\xE9es ("+n+" restantes).":"Mode gratuit : limite de "+O+" transactions atteinte \u2014 active un code pour continuer."}}function T(){Z(),Se(),S(),ne()}function ae(e){document.querySelectorAll(".view").forEach(function(n){n.classList.remove("active")}),document.getElementById("view-"+e).classList.add("active"),document.querySelectorAll(".nav-btn").forEach(function(n){n.classList.toggle("active",n.getAttribute("data-view")===e)});var t={dashboard:"Miroir Mobile Money",reports:"Rapports",transactions:"Transactions",import:"Importer des SMS"};document.getElementById("header-title").textContent=t[e],e==="reports"&&S(),e==="dashboard"&&Z()}document.querySelectorAll(".nav-btn").forEach(function(e){e.addEventListener("click",function(){ae(e.getAttribute("data-view"))})}),document.getElementById("import-activation-btn").addEventListener("click",function(){var e=document.getElementById("import-activation-input").value,t=z(e),n=document.getElementById("import-activation-result");n.textContent=t.msg,n.style.color=t.ok?"var(--income)":"var(--expense)",t.ok&&(document.getElementById("import-activation-input").value="")}),document.getElementById("parse-btn").addEventListener("click",function(){var e=document.getElementById("sms-input").value,t=document.getElementById("parse-result");if(!e.trim()){t.textContent="Colle d'abord un ou plusieurs SMS.";return}var n=ye(e),a=n.found,r=n.duplicates,i=n.excluded;if(a.length===0&&r===0&&i===0){t.innerHTML="Aucune transaction reconnue dans ce texte. Le format SMS n'est peut-\xEAtre pas encore pris en charge \u2014 v\xE9rifie qu'il contient bien un montant en FCFA.";return}var s="";if(!U()){var o=O-v.length;if(o<=0){t.innerHTML="Limite du mode gratuit atteinte ("+O+" transactions). Entre un code d'activation ci-dessus pour continuer \xE0 importer.";return}a.length>o&&(s="Limite gratuite atteinte : seules "+o+" transaction(s) sur "+a.length+" ont \xE9t\xE9 import\xE9es. Entre un code d'activation pour importer le reste.",a=a.slice(0,o))}v=v.concat(a),F(v);var c="";a.length>0&&(c+="<b>"+a.length+"</b> transaction(s) import\xE9e(s) et enregistr\xE9e(s) localement."),r>0&&(c+=(c?"<br>":"")+r+" message(s) d\xE9j\xE0 enregistr\xE9(s) \u2014 ignor\xE9(s)."),i>0&&(c+=(c?"<br>":"")+i+" message(s) ignor\xE9(s) (\xE9chec, annulation, code, ou bonus/m\xE9ga/unit\xE9s)."),s&&(c+=(c?"<br>":"")+s),t.innerHTML=c,document.getElementById("sms-input").value="",T()}),document.getElementById("clear-btn").addEventListener("click",function(){confirm("Effacer toutes les transactions enregistr\xE9es sur cet appareil ? Cette action est irr\xE9versible.")&&(v=[],F(v),T(),document.getElementById("parse-result").textContent="")}),(function(){var t=new URLSearchParams(window.location.search),n=t.get("shared_text")||t.get("text");n&&(document.getElementById("sms-input").value=n,ae("import"))})(),T(),console.log(re)})();</script>
+</body>
+</html>
